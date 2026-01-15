@@ -1,0 +1,4 @@
+clima --> AEMET
+alojamiento --> Booking
+Transporte --> Omio
+Actividades de ocio ---> civitatis
