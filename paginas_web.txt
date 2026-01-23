@@ -1,4 +1,4 @@
-clima --> AEMET
-alojamiento --> Booking
-Transporte --> Omio
-Actividades de ocio ---> civitatis
+buscar por género ---> imdb
+valoraciones ---> filmaffinity
+plataformas para ver las peliculas ---> justwatch
+sinopsis y actores ---> SensaCine.
