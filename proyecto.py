@@ -1,59 +1,75 @@
 import requests
 import time
+from collections import defaultdict
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 # PATGINA 1: IMDB: BUSCAR PELÍCULAS POR GÉNERO
-
-def obtener_titulos_imdb(genero, cantidad=10):
+VALID_GENRES = ["action", "adventure", "animation", "biography", "comedy", "crime", "documentary", "drama", "family", "fantasy", "film-noir", "history", "horror", "music", "musical", "mystery", "romance", "sci-fi", "short", "sport", "thriller", "war", "western"]
+def obtener_titulos_imdb(genero, cantidad=5):
     driver = webdriver.Chrome()
     lista_limpia = []
     try:
-        url = f"https://www.imdb.com/search/title/?genres={genero}&sort=moviemeter,asc"
-        driver.get(url)
-        time.sleep(3) # para que de tiempo a cargar la página
-        # Buscamos todos los títulos por su clase
+        driver.get(f"https://www.imdb.com/search/title/?genres={genero}&sort=moviemeter,asc")
+        time.sleep(3)
         elementos = driver.find_elements(By.CLASS_NAME, "ipc-title__text")
         for elem in elementos:
-            texto = elem.text
-            # si la peli es parte de una trilogia o saga
-            if ". " in texto:
-                #limpiamos el numero inicial
-                titulo = texto.split('. ', 1)[1]
-                lista_limpia.append(titulo)
-            
-            if len(lista_limpia) == cantidad:
-                break     
-        driver.quit()
-    except Exception as e:
-        print(f"Error: {e}")
-        driver.quit()
-        
+            if ". " in elem.text: # si forma parte de una trilogia o saga
+                try:
+                    lista_limpia.append(elem.text.split('. ', 1)[1])
+                except: continue
+            if len(lista_limpia) == cantidad: break
+    except: pass
+    finally: driver.quit()
     return lista_limpia
-generos= [
-    "action",
-    "adventure",
-    "animation",
-    "biography",
-    "comedy",
-    "crime",
-    "documentary",
-    "drama",
-    "family",
-    "fantasy",
-    "film-noir",
-    "history",
-    "horror",
-    "music",
-    "musical",
-    "mystery",
-    "romance",
-    "sci-fi",
-    "short",
-    "sport",
-    "thriller",
-    "war",
-    "western"
-]
+
 
 #PAGINA 2: FILMAFFINITY: buscar la nota de cada pelicula
+
+def obtener_nota(lista_titulos):
+    driver = uc.Chrome(options=uc.ChromeOptions()) # para solucionar lo verificación humana
+    dic_nota = {}
+    dic_actores = defaultdict(list)
+    url = 'https://www.filmaffinity.com/es/main.html'
+    
+    for titulo in lista_titulos:
+        try:
+            driver.get(url)
+            time.sleep(2)
+            try:
+                driver.find_element(By.ID, 'accept-btn').click()
+            except: pass # porque a la segunda vez no sale
+            
+            try: buscador = driver.find_element(By.ID, 'top-search-input-2')
+            except: buscador = driver.find_element(By.ID, 'top-search-input')
+            
+            buscador.clear()
+            buscador.send_keys(titulo)
+            buscador.submit()
+            time.sleep(3)
+            
+            try:
+                dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
+                elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
+                if len(elementos_actores) != 0:
+                    for i in elementos_actores[:3]:
+                        dic_actores[titulo].append(i.text)
+            except:
+                try:
+                    link = driver.find_element(By.XPATH, f"//a[contains(text(), '{titulo}')]")
+                    driver.execute_script("arguments[0].click();", link)
+                    time.sleep(3)
+                    dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
+                    elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
+                    if len(elementos_actores) != 0:
+                        for i in elementos_actores[:3]:
+                            dic_actores[titulo].append(i.text)
+                except:
+                    dic_nota[titulo] = "No encontrado"
+        except:
+            dic_nota[titulo] = "Error"
+            
+    try: driver.quit()
+    except: pass
+    return dic_nota,dic_actores
