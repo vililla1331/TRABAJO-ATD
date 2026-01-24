@@ -15,7 +15,7 @@ def obtener_titulos_imdb(genero, cantidad=5):
         time.sleep(3)
         elementos = driver.find_elements(By.CLASS_NAME, "ipc-title__text")
         for elem in elementos:
-            if ". " in elem.text: # si forma parte de una trilogia o saga
+            if ". " in elem.text:
                 try:
                     lista_limpia.append(elem.text.split('. ', 1)[1])
                 except: continue
@@ -28,7 +28,7 @@ def obtener_titulos_imdb(genero, cantidad=5):
 #PAGINA 2: FILMAFFINITY: buscar la nota de cada pelicula
 
 def obtener_nota(lista_titulos):
-    driver = uc.Chrome(options=uc.ChromeOptions()) # para solucionar lo verificación humana
+    driver = uc.Chrome(options=uc.ChromeOptions())
     dic_nota = {}
     dic_actores = defaultdict(list)
     url = 'https://www.filmaffinity.com/es/main.html'
