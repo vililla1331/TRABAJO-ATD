@@ -79,7 +79,7 @@ def buscar_plataformas(dic_nota):
     driver = webdriver.Chrome()
     dic_resultados = {}
     print(f"Iniciando una búsqueda para {len(dic_nota)} películas en JustWatch...")
-    #Gestión de las Cookies
+    #Aceptar las cookies si aparecen
     driver.get("https://www.justwatch.com/es")
     time.sleep(3)
     try:
