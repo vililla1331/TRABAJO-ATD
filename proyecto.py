@@ -5,7 +5,7 @@ import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-# PATGINA 1: IMDB: BUSCAR PELÍCULAS POR GÉNERO
+# PAGINA 1: IMDB: BUSCAR PELÍCULAS POR GÉNERO
 VALID_GENRES = ["action", "adventure", "animation", "biography", "comedy", "crime", "documentary", "drama", "family", "fantasy", "film-noir", "history", "horror", "music", "musical", "mystery", "romance", "sci-fi", "short", "sport", "thriller", "war", "western"]
 def obtener_titulos_imdb(genero, cantidad=5):
     driver = webdriver.Chrome()
