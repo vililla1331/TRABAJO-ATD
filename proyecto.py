@@ -1,14 +1,14 @@
 import requests
 import time
 from collections import defaultdict
-import undetected_chromedriver as uc
 from selenium import webdriver
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
-# PAGINA 1: IMDB: BUSCAR PELÍCULAS POR GÉNERO
 VALID_GENRES = ["action", "adventure", "animation", "biography", "comedy", "crime", "documentary", "drama", "family", "fantasy", "film-noir", "history", "horror", "music", "musical", "mystery", "romance", "sci-fi", "short", "sport", "thriller", "war", "western"]
+
 def obtener_titulos_imdb(genero, cantidad=5):
     driver = webdriver.Chrome()
     lista_limpia = []
@@ -26,9 +26,6 @@ def obtener_titulos_imdb(genero, cantidad=5):
     finally: driver.quit()
     return lista_limpia
 
-
-#PAGINA 2: FILMAFFINITY: buscar la nota de cada pelicula
-
 def obtener_nota(lista_titulos):
     driver = uc.Chrome(options=uc.ChromeOptions())
     dic_nota = {}
@@ -39,44 +36,66 @@ def obtener_nota(lista_titulos):
         try:
             driver.get(url)
             time.sleep(2)
-            try:
-                driver.find_element(By.ID, 'accept-btn').click()
-            except: pass # porque a la segunda vez no sale
             
+            # Gestión de Cookies
+            try: driver.find_element(By.ID, 'accept-btn').click()
+            except: pass 
+            
+            # Buscador
             try: buscador = driver.find_element(By.ID, 'top-search-input-2')
             except: buscador = driver.find_element(By.ID, 'top-search-input')
             
             buscador.clear()
             buscador.send_keys(titulo)
             buscador.submit()
-            time.sleep(3)
+            time.sleep(4) # Aumentado a 4s por seguridad
             
+            # INTENTO 1: ¿Entró directo a la ficha? (Caso Redirección)
             try:
+                # Si encuentra esto, es que estamos dentro
                 dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
+                
+                # Sacamos actores
                 elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
-                if len(elementos_actores) != 0:
-                    for i in elementos_actores[:3]:
-                        dic_actores[titulo].append(i.text)
+                dic_actores[titulo] = [i.text for i in elementos_actores[:3]]
+                
             except:
+                # INTENTO 2: Estamos en la lista de resultados
                 try:
-                    link = driver.find_element(By.XPATH, f"//a[contains(text(), '{titulo}')]")
-                    driver.execute_script("arguments[0].click();", link)
-                    time.sleep(3)
-                    dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
-                    elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
-                    if len(elementos_actores) != 0:
-                        for i in elementos_actores[:3]:
-                            dic_actores[titulo].append(i.text)
-                except:
+                    # En lugar de buscar texto exacto con XPath, buscamos los contenedores de titulos
+                    # Seleccionamos todos los enlaces de títulos de resultados
+                    resultados = driver.find_elements(By.CSS_SELECTOR, "div.mc-title a")
+                    encontrado = False
+                    
+                    for res in resultados:
+                        # Comparamos en minusculas para evitar errores "El botín" vs "el botín"
+                        if titulo.lower() in res.text.lower():
+                            driver.execute_script("arguments[0].click();", res)
+                            encontrado = True
+                            break # Dejamos de buscar
+                    
+                    if encontrado:
+                        time.sleep(3)
+                        dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
+                        
+                        elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
+                        dic_actores[titulo] = [i.text for i in elementos_actores[:3]]
+                    else:
+                         dic_nota[titulo] = "No encontrado en lista"
+
+                except Exception as e:
+                    # Imprimimos el error real para que sepas qué pasó
+                    print(f"Error buscando enlace para {titulo}: {e}")
                     dic_nota[titulo] = "No encontrado"
-        except:
+                    
+        except Exception as e:
+            print(f"Error general con {titulo}: {e}")
             dic_nota[titulo] = "Error"
             
     try: driver.quit()
     except: pass
-    return dic_nota,dic_actores
-    
-#PAGINA 3: JUSTWATCH: buscar las plataformas de cada película
+    return dic_nota, dic_actores
+
 def buscar_plataformas(lista_titulos):
     driver = uc.Chrome()
     dic_resultados = {}
@@ -105,8 +124,9 @@ def buscar_plataformas(lista_titulos):
             elementos = driver.find_elements(By.CLASS_NAME, "header-title")
             if elementos:
                 driver.execute_script("arguments[0].click();", elementos[0])
+                time.sleep(2)
+                driver.execute_script("window.scrollTo(0, 250);")
                 time.sleep(3)
-                
                 filas = driver.find_elements(By.CLASS_NAME, "buybox-row")
                 plataformas = []
                 encontrado = False
@@ -123,7 +143,6 @@ def buscar_plataformas(lista_titulos):
                 
                 if encontrado and plataformas:
                     dic_resultados[titulo] = plataformas
-                    print(f" -> Encontrada en: {plataformas}")
                 else:
                     dic_resultados[titulo] = 'No esta disponible'
                     print(f" -> No disponible en streaming")
@@ -135,9 +154,6 @@ def buscar_plataformas(lista_titulos):
     
     driver.quit()
     return dic_resultados
-    
-#PAGINA 4: WIKIPEDIA: Sinopsis de la películay recomendación de 5 películas de los 3 principales actores
-
 def sinopsis_recom(dic_actores, pausa=1.0):
     BASE = "https://es.wikipedia.org"
     HEADERS = {
@@ -213,3 +229,19 @@ def sinopsis_recom(dic_actores, pausa=1.0):
                 dic_pelis_por_actor[titulo][actor] = ["No encontrado"]
             time.sleep(pausa)
     return dic_sinopsis, dic_pelis_por_actor
+
+if __name__ == "__main__":
+    genero = input("Introduce género: ").strip().lower()
+    while genero not in VALID_GENRES:
+        genero = input("Género no válido: ").strip().lower()
+    
+    mis_pelis = obtener_titulos_imdb(genero)
+    print(f"Peliculas: {mis_pelis}")
+    notas, actores = obtener_nota(mis_pelis)
+    plataformas= buscar_plataformas(mis_pelis)
+    sinopsis, pelis_por_actor = sinopsis_recom(actores)
+    print(f"Notas: {notas}")
+    print(f"Actores: {actores}")
+    print(f'Plataformas: {plataformas}')
+    print(f'Sinopsis: {sinopsis}')
+    print(f'Películas por actor: {pelis_por_actor}')
