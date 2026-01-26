@@ -48,31 +48,30 @@ def obtener_nota(lista_titulos):
             buscador.clear()
             buscador.send_keys(titulo)
             buscador.submit()
-            time.sleep(4) # Aumentado a 4s por seguridad
+            time.sleep(4) 
             
-            # INTENTO 1: ¿Entró directo a la ficha? (Caso Redirección)
+         
             try:
-                # Si encuentra esto, es que estamos dentro
+                
                 dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
                 
-                # Sacamos actores
+                
                 elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
                 dic_actores[titulo] = [i.text for i in elementos_actores[:3]]
                 
             except:
-                # INTENTO 2: Estamos en la lista de resultados
+                
                 try:
-                    # En lugar de buscar texto exacto con XPath, buscamos los contenedores de titulos
-                    # Seleccionamos todos los enlaces de títulos de resultados
+                   
                     resultados = driver.find_elements(By.CSS_SELECTOR, "div.mc-title a")
                     encontrado = False
                     
                     for res in resultados:
-                        # Comparamos en minusculas para evitar errores "El botín" vs "el botín"
+                       
                         if titulo.lower() in res.text.lower():
                             driver.execute_script("arguments[0].click();", res)
                             encontrado = True
-                            break # Dejamos de buscar
+                            break 
                     
                     if encontrado:
                         time.sleep(3)
@@ -84,7 +83,7 @@ def obtener_nota(lista_titulos):
                          dic_nota[titulo] = "No encontrado en lista"
 
                 except Exception as e:
-                    # Imprimimos el error real para que sepas qué pasó
+                    
                     print(f"Error buscando enlace para {titulo}: {e}")
                     dic_nota[titulo] = "No encontrado"
                     
