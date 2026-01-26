@@ -164,7 +164,7 @@ def sinopsis_recom(dic_actores, pausa=1.0):
             sinopsis = "Sinopsis no encontrada"
             h = soup.find(
                 lambda tag: tag.name in ["h2", "h3"]
-                and any(x in tag.get_text() for x in ["Argumento", "Trama", "Sinopsis"])
+                and any(x in tag.get_text() for x in ["Argumento", "Trama", "Sinopsis","Resumen","Historia"])
             )
             if h:
                 p = h.find_next("p")
