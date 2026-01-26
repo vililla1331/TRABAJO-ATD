@@ -77,53 +77,63 @@ def obtener_nota(lista_titulos):
     return dic_nota,dic_actores
     
 #PAGINA 3: JUSTWATCH: buscar las plataformas de cada película
-def buscar_plataformas(dic_nota):
-    driver = webdriver.Chrome()
+def buscar_plataformas(lista_titulos):
+    driver = uc.Chrome()
     dic_resultados = {}
-    print(f"Iniciando una búsqueda para {len(dic_nota)} películas en JustWatch...")
-    #Aceptar las cookies si aparecen
-    driver.get("https://www.justwatch.com/es")
-    time.sleep(3)
-    try:
-        botones = driver.find_elements(By.TAG_NAME, "button")
-        for boton in botones:
-            if "Aceptar" in boton.text or "Accept" in boton.text:
-                boton.click()
-                print("Cookies aceptadas.")
-                break
-    except:
-        print("No se pudieron aceptar las cookies o no aparecieron.")
-    #Búsqueda de plataforma para cada película
-    for pelicula in dic_nota.keys():
-        print(f"Buscando: {pelicula}...")
-        url_busqueda = f"https://www.justwatch.com/es/buscar?q={pelicula.replace(' ', '%20')}"
-        driver.get(url_busqueda)
-        time.sleep(3)
-        try:
-            #Buscamos el primer elemento de la rejilla de resultados al buscar la pelicula que contiene "title-list-grid__item"
-            primer_resultado = driver.find_element(By.CSS_SELECTOR, "div.title-list-grid__item a")
-            primer_resultado.click()
+    url = 'https://www.justwatch.com/es'
+    
+    print("Iniciando búsqueda en JustWatch...")
 
+    for titulo in lista_titulos:
+        try:
+            driver.get(url)
+            time.sleep(2)
+            
+            try:
+                for btn in driver.find_elements(By.TAG_NAME, "button"):
+                    if "Accept" in btn.text or "Aceptar" in btn.text:
+                        btn.click(); break
+            except: pass 
+
+            try: buscador = driver.find_element(By.CSS_SELECTOR, 'input[name="q"]')
+            except: buscador = driver.find_element(By.ID, 'searchbar-input')
+            
+            buscador.clear(); buscador.send_keys(titulo); buscador.submit()
+            print(f"Buscando plataformas para: {titulo}")
             time.sleep(3)
             
-            #Las plataformas están dentro de una caja llamada "buybox-row__offers" como imágenes
-            imagenes_plataformas = driver.find_elements(By.CSS_SELECTOR, "div.buybox-row__offers img")
-            plataformas= []
-            for imagen in imagenes_plataformas:
-                nombre_plataforma = imagen.get_attribute("alt")
-                if nombre_plataforma not in plataformas:
-                    plataformas.append(nombre_plataforma)
-            #Guardamos en el diccionario el resultado:
-            dic_resultados[pelicula] = plataformas
-            print(f"Película encontrada en: {plataformas}")
-        except Exception as e:
-            # Si falla (no hay plataformas encontradas), guardamos una lista vacía
-            print(f"No se encontraron plataformas para la película o hubo un error: {e}")
-            dic_resultados[pelicula] = ["No disponible, error"]
-            continue
+            elementos = driver.find_elements(By.CLASS_NAME, "header-title")
+            if elementos:
+                driver.execute_script("arguments[0].click();", elementos[0])
+                time.sleep(3)
+                
+                filas = driver.find_elements(By.CLASS_NAME, "buybox-row")
+                plataformas = []
+                encontrado = False
 
-    driver.quit()
+                for fila in filas:
+                    txt = fila.text.lower()
+                    if "stream" in txt or "fijo" in txt or "suscripción" in txt:
+                        for img in fila.find_elements(By.TAG_NAME, "img"):
+                            nombre = img.get_attribute("alt")
+                            if nombre and nombre not in plataformas:
+                                plataformas.append(nombre)
+                        encontrado = True
+                        break 
+                
+                if encontrado and plataformas:
+                    dic_resultados[titulo] = plataformas
+                    print(f" -> Encontrada en: {plataformas}")
+                else:
+                    dic_resultados[titulo] = 'No esta disponible'
+                    print(f" -> No disponible en streaming")
+            else:
+                dic_resultados[titulo] = 'No esta disponible'
+
+        except:
+            dic_resultados[titulo] = "Error"
     
+    driver.quit()
     return dic_resultados
     
 #PAGINA 4: WIKIPEDIA: Sinopsis de la películay recomendación de 5 películas de los 3 principales actores
