@@ -1,3 +1,4 @@
+import json
 import requests
 import time
 from collections import defaultdict
@@ -227,12 +228,18 @@ if __name__ == "__main__":
         genero = input("Género no válido: ").strip().lower()
     
     mis_pelis = obtener_titulos_imdb(genero)
-    print(f"Peliculas: {mis_pelis}")
     notas, actores = obtener_nota(mis_pelis)
-    plataformas= buscar_plataformas(mis_pelis)
+    plataformas = buscar_plataformas(mis_pelis)
     sinopsis, pelis_por_actor = sinopsis_recom(actores)
-    print(f"Notas: {notas}")
-    print(f"Actores: {actores}")
-    print(f'Plataformas: {plataformas}')
-    print(f'Sinopsis: {sinopsis}')
-    print(f'Películas por actor: {pelis_por_actor}')
+    datos_finales = {
+    "peliculas": mis_pelis,
+    "notas": notas,
+    "actores": actores,
+    "plataformas": plataformas,
+    "sinopsis": sinopsis,
+    "recomendaciones_por_actor": pelis_por_actor
+        }
+
+    json_resultado = json.dumps(datos_finales, indent=4, ensure_ascii=False)
+
+    print(json_resultado)
