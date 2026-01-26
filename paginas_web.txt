@@ -2,3 +2,7 @@ buscar por género ---> imdb
 valoraciones ---> filmaffinity
 plataformas para ver las peliculas ---> justwatch
 sinopsis y actores ---> SensaCine.
+
+Para la extracción de datos se han utilizado distintas herramientas según las características de cada web. En IMDB y JustWatch se emplea Selenium, ya que el contenido se carga de forma dinámica y requiere interacción con la página. En Filmaffinity se utiliza undetected_chromedriver para evitar bloqueos durante la automatización, y en Wikipedia se emplean requests y BeautifulSoup al tratarse de contenido estático. 
+
+El proceso se divide en varias fases: obtención de títulos por género desde IMDB, extracción de la nota y actores principales en Filmaffinity, consulta de plataformas de visualización en JustWatch y, finalmente, obtención de la sinopsis y recomendaciones desde Wikipedia. Los datos se relacionan utilizando el título de la película como elemento común y se aplican pausas entre peticiones para mejorar la estabilidad del proceso. 
