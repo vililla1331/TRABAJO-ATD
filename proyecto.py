@@ -4,6 +4,8 @@ from collections import defaultdict
 import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
+from urllib.parse import quote
 
 # PAGINA 1: IMDB: BUSCAR PELÍCULAS POR GÉNERO
 VALID_GENRES = ["action", "adventure", "animation", "biography", "comedy", "crime", "documentary", "drama", "family", "fantasy", "film-noir", "history", "horror", "music", "musical", "mystery", "romance", "sci-fi", "short", "sport", "thriller", "war", "western"]
@@ -74,7 +76,7 @@ def obtener_nota(lista_titulos):
     except: pass
     return dic_nota,dic_actores
     
-#PAGINA 3: JUSTWACH: buscar las plataformas de cada película
+#PAGINA 3: JUSTWATCH: buscar las plataformas de cada película
 def buscar_plataformas(dic_nota):
     driver = webdriver.Chrome()
     dic_resultados = {}
@@ -123,3 +125,81 @@ def buscar_plataformas(dic_nota):
     driver.quit()
     
     return dic_resultados
+    
+#PAGINA 4: WIKIPEDIA: Sinopsis de la películay recomendación de 5 películas de los 3 principales actores
+
+def sinopsis_recom(dic_actores, pausa=1.0):
+    BASE = "https://es.wikipedia.org"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8"
+    }
+    dic_sinopsis = {}
+    dic_pelis_por_actor = {}
+    for titulo, actores in dic_actores.items():
+        try:
+            r = requests.get(
+                f"{BASE}/w/index.php?search={quote(titulo)}",
+                headers=HEADERS, timeout=15
+            )
+            soup = BeautifulSoup(r.text, "html.parser")
+            sinopsis = "Sinopsis no encontrada"
+            h = soup.find(
+                lambda tag: tag.name in ["h2", "h3"]
+                and any(x in tag.get_text() for x in ["Argumento", "Trama", "Sinopsis"])
+            )
+            if h:
+                p = h.find_next("p")
+                if p:
+                    sinopsis = p.get_text(" ", strip=True)
+            dic_sinopsis[titulo] = sinopsis
+        except:
+            dic_sinopsis[titulo] = "Sinopsis no encontrada"
+        time.sleep(pausa)
+        dic_pelis_por_actor[titulo] = {}
+        for actor in actores[:3]:
+            try:
+                r = requests.get(
+                    f"{BASE}/w/index.php?search={quote(actor)}",
+                    headers=HEADERS, timeout=15
+                )
+                soup = BeautifulSoup(r.text, "html.parser")
+                pelis = []
+                # primero tablas
+                for table in soup.select("table.wikitable"):
+                    for tr in table.select("tr")[1:]:
+                        tds = tr.find_all("td")
+                        if len(tds) < 2:
+                            continue
+                        year = tds[0].get_text(strip=True)
+                        if not (year.isdigit() and len(year) == 4):
+                            continue
+                        a = tds[1].select_one("a[href^='/wiki/']")
+                        if not a:
+                            continue
+                        peli = f"{a.get_text(strip=True)} ({year})"
+                        if peli not in pelis:
+                            pelis.append(peli)
+                        if len(pelis) == 5:
+                            break
+                    if len(pelis) == 5:
+                        break
+                # fallback por si falla
+                if not pelis:
+                    for li in soup.select("div#mw-content-text li"):
+                        txt = li.get_text(" ", strip=True)
+                        if "(" in txt and ")" in txt:
+                            year = txt[txt.find("(")+1:txt.find(")")]
+                            if year.isdigit() and len(year) == 4:
+                                a = li.select_one("a[href^='/wiki/']")
+                                if a:
+                                    peli = f"{a.get_text(strip=True)} ({year})"
+                                    if peli not in pelis:
+                                        pelis.append(peli)
+                        if len(pelis) == 5:
+                            break
+                dic_pelis_por_actor[titulo][actor] = pelis if pelis else ["No encontrado"]
+            except:
+                dic_pelis_por_actor[titulo][actor] = ["No encontrado"]
+            time.sleep(pausa)
+    return dic_sinopsis, dic_pelis_por_actor
