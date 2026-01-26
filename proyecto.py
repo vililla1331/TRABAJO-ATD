@@ -49,30 +49,22 @@ def obtener_nota(lista_titulos):
             buscador.send_keys(titulo)
             buscador.submit()
             time.sleep(4) 
-            
          
             try:
-                
                 dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
-                
-                
                 elementos_actores = driver.find_elements(By.CSS_SELECTOR, "div.name[itemprop='name']")
                 dic_actores[titulo] = [i.text for i in elementos_actores[:3]]
                 
             except:
                 
                 try:
-                   
                     resultados = driver.find_elements(By.CSS_SELECTOR, "div.mc-title a")
                     encontrado = False
-                    
                     for res in resultados:
-                       
                         if titulo.lower() in res.text.lower():
                             driver.execute_script("arguments[0].click();", res)
                             encontrado = True
                             break 
-                    
                     if encontrado:
                         time.sleep(3)
                         dic_nota[titulo] = driver.find_element(By.ID, "movie-rat-avg").get_attribute("content")
