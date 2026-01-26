@@ -156,20 +156,38 @@ def sinopsis_recom(dic_actores, pausa=1.0):
     dic_pelis_por_actor = {}
     for titulo, actores in dic_actores.items():
         try:
-            r = requests.get(
-                f"{BASE}/w/index.php?search={quote(titulo)}",
-                headers=HEADERS, timeout=15
-            )
-            soup = BeautifulSoup(r.text, "html.parser")
+            api = "https://es.wikipedia.org/w/api.php"
+            params = {
+                "action": "query",
+                "list": "search",
+                "srsearch": titulo,
+                "srlimit": 1,
+                "format": "json"
+            }
+            r = requests.get(api, params=params, headers=HEADERS, timeout=15)
+            data = r.json()
+            resultados = data.get("query", {}).get("search", [])
+            titulo_real = resultados[0]["title"] if resultados else None
             sinopsis = "Sinopsis no encontrada"
-            h = soup.find(
-                lambda tag: tag.name in ["h2", "h3"]
-                and any(x in tag.get_text() for x in ["Argumento", "Trama", "Sinopsis","Resumen","Historia"])
-            )
-            if h:
-                p = h.find_next("p")
-                if p:
-                    sinopsis = p.get_text(" ", strip=True)
+            if titulo_real:
+                r2 = requests.get(
+                    f"https://es.wikipedia.org/wiki/{quote(titulo_real)}",
+                    headers=HEADERS, timeout=15
+                )
+                soup2 = BeautifulSoup(r2.text, "html.parser")
+                h = soup2.find(
+                    lambda tag: tag.name in ["h2", "h3"]
+                    and any(x in tag.get_text() for x in ["Argumento", "Trama", "Sinopsis", "Resumen", "Historia"])
+                )
+                if not h:
+                    h = soup2.find(
+                        lambda tag: tag.name in ["h2", "h3"]
+                        and "Plot" in tag.get_text()
+                    )
+                if h:
+                    p = h.find_next("p")
+                    if p and len(p.get_text(strip=True)) > 80:
+                        sinopsis = p.get_text(" ", strip=True)
             dic_sinopsis[titulo] = sinopsis
         except:
             dic_sinopsis[titulo] = "Sinopsis no encontrada"
