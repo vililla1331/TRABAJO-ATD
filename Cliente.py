@@ -5,7 +5,7 @@ def consultar_peliculas():
     genero = input("Introduce género: ").strip().lower()
     
     cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    cliente.connect(('localhost', 5000))
+    cliente.connect(('localhost', 5001))
     cliente.send(genero.encode('utf-8'))
     
     data = b""
