@@ -240,6 +240,24 @@ def sinopsis_recom(dic_actores, pausa=1.0):
             time.sleep(pausa)
     return dic_sinopsis, dic_pelis_por_actor
 
+def filtrado(mis_pelis, notas, sinopsis):
+    validacion = {}
+    for titulo in mis_pelis:
+        errores = []
+        nota = notas.get(titulo)
+        try:
+            float(nota)
+        except:
+            errores.append("nota_no_valida")
+        sinop = sinopsis.get(titulo, "")
+        if not sinop or sinop == "Sinopsis no encontrada":
+            errores.append("sinopsis_no_valida")
+        validacion[titulo] = {
+            "valida": len(errores) == 0,
+            "errores": errores
+        }
+    return validacion
+    
 if __name__ == "__main__":
     genero = input("Introduce género: ").strip().lower()
     while genero not in VALID_GENRES:
@@ -249,13 +267,15 @@ if __name__ == "__main__":
     notas, actores = obtener_nota(mis_pelis)
     plataformas = buscar_plataformas(mis_pelis)
     sinopsis, pelis_por_actor = sinopsis_recom(actores)
+    validacion = filtrado(mis_pelis, notas, sinopsis)
     datos_finales = {
     "peliculas": mis_pelis,
     "notas": notas,
     "actores": actores,
     "plataformas": plataformas,
     "sinopsis": sinopsis,
-    "recomendaciones_por_actor": pelis_por_actor
+    "recomendaciones_por_actor": pelis_por_actor,
+    "validacion": validacion
         }
 
     json_resultado = json.dumps(datos_finales, indent=4, ensure_ascii=False)
