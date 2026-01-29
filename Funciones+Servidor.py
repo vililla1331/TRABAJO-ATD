@@ -29,7 +29,7 @@ def obtener_titulos_imdb(genero, cantidad=5):
     return lista_limpia
 
 def obtener_nota(lista_titulos):
-    driver = uc.Chrome(options=uc.ChromeOptions())
+    driver = uc.Chrome(options=uc.ChromeOptions(), version_main=144)#para que no de error si se vuelve a actualizar Chrome
     dic_nota = {}
     dic_actores = defaultdict(list)
     url = 'https://www.filmaffinity.com/es/main.html'
@@ -90,7 +90,7 @@ def obtener_nota(lista_titulos):
     return dic_nota, dic_actores
 
 def buscar_plataformas(lista_titulos):
-    driver = uc.Chrome()
+    driver = uc.Chrome(version_main=144)
     dic_resultados = {}
     url = 'https://www.justwatch.com/es'
     
@@ -241,10 +241,28 @@ def sinopsis_recom(dic_actores, pausa=1.0):
             time.sleep(pausa)
     return dic_sinopsis, dic_pelis_por_actor
 
+def filtrado(mis_pelis, notas, sinopsis):
+    validacion = {}
+    for titulo in mis_pelis:
+        errores = []
+        nota = notas.get(titulo)
+        try:
+            float(nota)
+        except:
+            errores.append("nota_no_valida")
+        sinop = sinopsis.get(titulo, "")
+        if not sinop or sinop == "Sinopsis no encontrada":
+            errores.append("sinopsis_no_valida")
+        validacion[titulo] = {
+            "valida": len(errores) == 0,
+            "errores": errores
+        }
+    return validacion
+
 #USO DE SERVIDOR SOCKET
 def ejecutar_servidor():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 5000))
+    server_socket.bind(('localhost', 5001))
     server_socket.listen(1)
     print("Servidor listo y escuchando en el puerto 5000. Esperando para recibir un género.")
 
@@ -257,26 +275,31 @@ def ejecutar_servidor():
             if not genero: continue
             print(f"Procesando género: {genero}")
 
-            pelis = obtener_titulos_imdb(genero)
-            notas, actores = obtener_nota(pelis)
-            plataformas = buscar_plataformas(pelis)
+            mis_pelis = obtener_titulos_imdb(genero)
+            notas, actores = obtener_nota(mis_pelis)
+            plataformas = buscar_plataformas(mis_pelis)
             sinopsis, pelis_por_actor = sinopsis_recom(actores)
+            
+            datos_filtrados=filtrado(mis_pelis, notas, sinopsis)
 
             resultados = {
-                "peliculas": pelis,
+                "peliculas": mis_pelis,
                 "notas": notas,
                 "actores": actores,
                 "plataformas": plataformas,
                 "sinopsis": sinopsis,
-                "recomendaciones_por_actor": pelis_por_actor
+                "recomendaciones_por_actor": pelis_por_actor,
+                "datos filtrados": datos_filtrados
             }
 
-            
             respuesta = json.dumps(resultados, ensure_ascii=False)
             conn.sendall(respuesta.encode('utf-8'))
             
         except Exception as e:
             print(f"Error en el servidor: {e}")
+            # ENVIAR ERROR AL CLIENTE EN LUGAR DE CERRAR EN SILENCIO
+            error_msg = json.dumps({"error": str(e)}, ensure_ascii=False)
+            conn.sendall(error_msg.encode('utf-8'))
         finally:
             conn.close()
 
