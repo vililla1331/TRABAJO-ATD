@@ -258,6 +258,7 @@ def filtrado(mis_pelis, notas, sinopsis):
         }
     return validacion
     
+#BLOQUE DE EJECUCIÓN    
 if __name__ == "__main__":
     genero = input("Introduce género: ").strip().lower()
     while genero not in VALID_GENRES:
